@@ -1,0 +1,61 @@
+#;******************************************************************************
+#;* Copyright (c) 1983-2011, Insyde Software Corporation. All Rights Reserved.
+#;*
+#;* You may not reproduce, distribute, publish, display, perform, modify, adapt,
+#;* transmit, broadcast, present, recite, release, license or otherwise exploit
+#;* any part of this publication in any form, by any means, without the prior
+#;* written permission of Insyde Software Corporation.
+#;*
+#;******************************************************************************
+#;
+#; Module Name:
+#;
+#;   SmscUsbNetDriver.inf
+#;
+#; Abstract:
+#;
+#;   Component description file for SmscUsbNetDriver module
+#;
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = Lan7800Driver
+  FILE_GUID                      = f5a43cf5-58a9-4517-a35e-67e786b9f5fd
+  MODULE_TYPE                    = UEFI_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = Lan7800DriverEntryPoint
+
+[Sources]
+  Lan7800Driver.h
+  Lan7800Driver.c
+  Lan7800Undi.h
+  Lan7800Undi.c
+  Lan7800.h
+  Lan7800.c
+  Debug.h
+  Debug.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Lan7800UndiPkg/Lan7800UndiPkg.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  UefiLib
+  BaseMemoryLib
+  DebugLib
+  NetLib
+  IoLib
+
+[Protocols]
+  gEfiPciIoProtocolGuid
+  gEfiUsbIoProtocolGuid
+  gLan7800DeviceCmdProtocolGuid
+  gEfiNetworkInterfaceIdentifierProtocolGuid_31
+  
+[BuildOptions]
+  *_*_IA32_CC_FLAGS    = $(SUPPORT_FLAG) $(DSC_GLOBAL_BUILD_OPTIONS) $(CC_FLAGS)
+  *_*_X64_CC_FLAGS     = $(SUPPORT_FLAG) $(DSC_GLOBAL_BUILD_OPTIONS) $(CC_FLAGS)
+  

@@ -1,0 +1,30 @@
+
+
+[Defines]
+  DEC_SPECIFICATION              = 0x00010005
+  PACKAGE_NAME                   = Lan7800UndiPkg
+  PACKAGE_GUID                   = f78cb1c2-f36c-454d-b871-ee3b2c87d5ad
+  PACKAGE_VERSION                = 0.91
+
+[Includes]
+  Include
+
+[LibraryClasses]
+
+
+[Guids]
+
+  
+[Ppis]
+
+
+[Protocols]
+  gLan7800DeviceCmdProtocolGuid = { 0xb80d8a43, 0xf58d, 0x44ec, { 0x99, 0x2c, 0xfe, 0x7e, 0xec, 0xcd, 0xf4, 0xf9 } }
+
+[PcdsFeatureFlag]
+
+
+[PcdsFixedAtBuild,PcdsPatchableInModule,PcdsDynamic]
+
+
+[PcdsDynamic]

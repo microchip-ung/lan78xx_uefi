@@ -1,0 +1,39 @@
+#;******************************************************************************
+#;Microchip (c)
+#;******************************************************************************
+#;
+#; Module Name:
+#;
+#;   Lan7800Utility.inf
+#;
+#; Abstract:
+#;
+#;   Component description file for Lan7800Utility application
+#;
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = Lan7800Utility
+  FILE_GUID                      = 65d4adf9-7d17-476f-b569-fe6636f5eb39
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 0.1
+  ENTRY_POINT                    = Lan7800UtilityMain
+
+[Sources]
+  Lan7800Utility.c
+  Lan7800Utility.h
+
+[Packages]
+  MdePkg/MdePkg.dec
+  ShellPkg/ShellPkg.dec
+  Lan7800UndiPkg/Lan7800UndiPkg.dec
+
+[LibraryClasses]
+  UefiLib
+  BaseMemoryLib
+  UefiApplicationEntryPoint
+  UefiBootServicesTableLib
+  
+[Protocols]
+  gLan7800DeviceCmdProtocolGuid
+  
