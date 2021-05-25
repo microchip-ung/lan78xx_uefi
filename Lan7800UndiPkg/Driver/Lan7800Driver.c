@@ -320,6 +320,7 @@ Lan7800DriverBindingSupported(
 	// Get VID and PID
 	Status = UsbIo->UsbGetDeviceDescriptor(UsbIo, &DeviceDescriptor);
 	if (EFI_ERROR(Status)) {
+		DEBUGPRINT(DBG_ERROR, ("%a get vid and pid failed\n", __FUNCTION__));
 		goto DONE;
 	}
 
@@ -360,6 +361,7 @@ Lan7800DriverBindingStart (
 	MAC_ADDRESS_DEVICE_PATH_NODE	TempMacAddrPath;
 
 	DEBUGPRINT(DBG_DRV, ("%a\n", __FUNCTION__));
+	DEBUGPRINT(DBG_2021, ("%a\n", __FUNCTION__)); // yo BUGBUG
 
 	// Get the device path for the handle
 	ParentDevicePath = NULL;
@@ -683,6 +685,7 @@ Lan7800DriverEntryPoint(
 	EFI_LOADED_IMAGE_PROTOCOL  *LoadedImage;
 
 	DEBUGPRINT(DBG_DRV,("%a\n", __FUNCTION__));
+	DEBUGPRINT(DBG_2021,("%a\n", __FUNCTION__)); // yo BUGBUG
   
 	gLan7800ImageHandle = ImageHandle;
 	gLan7800SystemTable = SystemTable;

@@ -27,6 +27,9 @@
 //Debug message levels
 #define DBG_WARNING		0x00000001
 #define DBG_ERROR		0x00000002
+#define DBG_2021		0x00000004
+#define DBG_VERSION		0x00000008
+#define DBG_TRACE		0x00000010
 
 // Modules enable
 #define DBG_DRV			0x10000000
