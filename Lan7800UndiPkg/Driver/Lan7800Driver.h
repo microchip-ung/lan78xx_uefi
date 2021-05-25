@@ -42,7 +42,7 @@
 #include <Base.h>
 #include <Protocol/Lan7800CmdProtocol.h>
 
-#define DRIVER_VERSION				0x00000003		//Update this for each revision of the driver
+#define DRIVER_VERSION				0x00000005		//Update this for each revision of the driver
 
 //Driver name
 #define LAN7800_DRIVER_NAME			L"LAN7800 USB-to-Ehternet Driver"
@@ -154,8 +154,6 @@ typedef struct _LAN7800_ADAPTER_DATA {
 	PXE31_SYNC_MEM						SyncMem;
 	UINT64								UniqueId;
 
-	// to avoid repeat setting in GetStatus
-	UINT8								MulticastDone;
 } LAN7800_ADAPTER_DATA;
 
 CHAR16 * 

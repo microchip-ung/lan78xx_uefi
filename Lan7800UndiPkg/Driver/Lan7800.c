@@ -83,7 +83,7 @@ Lan7800WriteRegister(
 	UINTN					Retry;
 	EFI_STATUS				Status = EFI_SUCCESS;
 
-	//DEBUGPRINT(DBG_LAN, ("%a\n", __FUNCTION__));
+	DEBUGPRINT(DBG_LAN, ("%a\n", __FUNCTION__));
 
 	UsbIo = Adapter->UsbIo;
 
@@ -181,6 +181,9 @@ Lan7800ReadPhyRegister(
 	}
 
 	*Data = (UINT32) (Value & 0xFFFF);
+
+	if (*Data != 0x79ed)
+		DEBUGPRINT(DBG_2021, ("%a index %d data 0x%x\n", __FUNCTION__, Index, (UINT32) (Value & 0xFFFF)));
 
 	return EFI_SUCCESS; 
 }
@@ -611,8 +614,8 @@ Lan7800InitMacAddress(
 	CopyMem(Adapter->MacAddress, MacAddress, PXE_HWADDR_LEN_ETHER);
 	SetMem(Adapter->BroadcastMacAddress, PXE_HWADDR_LEN_ETHER, 0xFF);
 
-	//DEBUGPRINT(DBG_LAN, ("MacAddress = %02x:%02x:%02x:%02x:%02x:%02x\n",
-		//MacAddress[0], MacAddress[1], MacAddress[2], MacAddress[3], MacAddress[4], MacAddress[5]));
+	DEBUGPRINT(DBG_2021, ("MacAddress = %02x:%02x:%02x:%02x:%02x:%02x\n",
+		MacAddress[0], MacAddress[1], MacAddress[2], MacAddress[3], MacAddress[4], MacAddress[5]));
 
 	return Status;
 }
@@ -623,18 +626,22 @@ Lan7800PhyInitialize(
 	)
 {
 	UINT32	Value;
+	UINT32 count = 0;
 	EFI_STATUS   Status = EFI_SUCCESS;
 
 	DEBUGPRINT(DBG_LAN, ("%a\n", __FUNCTION__));
+	DEBUGPRINT(DBG_2021, ("%a\n", __FUNCTION__));
 
 	// Auto-neg advertisement
 	Status = Lan7800ReadPhyRegister(Adapter, Adapter->PhyId, PHY_AUTONEG_ADV, &Value);
 	if (EFI_ERROR(Status)) {
+		DEBUGPRINT(DBG_ERROR, ("%a Lan7800ReadPhyRegister ERROR\n", __FUNCTION__));
 		return Status;
 	}
 	Value |= (NWAY_AR_ALL_CAPS_ | NWAY_AR_ASM_DIR_ | NWAY_AR_PAUSE_);
 	Status = Lan7800WritePhyRegister(Adapter, Adapter->PhyId, PHY_AUTONEG_ADV, Value);
 	if (EFI_ERROR(Status)) {
+		DEBUGPRINT(DBG_ERROR, ("%a Lan7800WritePhyRegister ERROR\n", __FUNCTION__));
 		return Status;
 	}
 
@@ -661,6 +668,24 @@ Lan7800PhyInitialize(
 	if (EFI_ERROR(Status)) {
 		return Status;
 	}
+	
+	// check autoneg done
+	while (count <100) {
+		Status = Lan7800ReadPhyRegister(Adapter, Adapter->PhyId, PHY_STATUS, &Value);
+		if (EFI_ERROR(Status)) {
+			return Status;
+		}
+		if (Value & MII_SR_AUTONEG_COMPLETE_)
+			break;
+		count++;
+		gBS->Stall(50000);	// (unit nS) 2/23/2021
+	}
+	if (count == 100)
+		DEBUGPRINT(DBG_ERROR, ("%a timeout autoneg\n", __FUNCTION__));
+			
+	
+	DEBUGPRINT(DBG_2021, ("%a success\n", __FUNCTION__));
+
 
 	return Status;
 }
@@ -816,6 +841,7 @@ Lan7800Reset(
 	EFI_STATUS	Status = EFI_SUCCESS;
 
 	DEBUGPRINT(DBG_LAN, ("%a\n", __FUNCTION__));
+	DEBUGPRINT(DBG_2021, ("%a\n", __FUNCTION__));
 
 	//Do lite reset
 	Status = Lan7800ReadRegister(Adapter, HW_CFG, &Value);
@@ -895,7 +921,6 @@ Lan7800Reset(
 			}
 			if(((Value & 0xffff) != 0xffff) && ((Value & 0xffff) != 0x0000))
 			{
-				Print(L"Detected PHY Address = %d\n", Count);
 				break;
 			}
 		}
@@ -903,7 +928,6 @@ Lan7800Reset(
 		if (Count < 0)
 		{
 			Adapter->PhyId = (UINT8) 0x1;
-			Print(L"PHY Address not detected. Defaulting to 1\n");
 		}
 	}
 
@@ -923,13 +947,10 @@ Lan7800Reset(
 
 	//Set the burst cap
 	if (Adapter->DeviceSpeedCapbility == 0x300) {
-		//Print(L"Super speed\n");
 		Value =  DEFAULT_BURST_CAP_SIZE / SS_USB_PKT_SIZE;
 	} else if (Adapter->DeviceSpeedCapbility == 0x210) {
-		//Print(L"High speed\n");
 		Value =  DEFAULT_BURST_CAP_SIZE / HS_USB_PKT_SIZE;
 	} else {
-		//Print(L"Full/Lowspeed\n");
 		Value =  DEFAULT_BURST_CAP_SIZE / FS_USB_PKT_SIZE;
 	}
 	Status = Lan7800WriteRegister(Adapter, BURST_CAP, Value);
@@ -937,7 +958,6 @@ Lan7800Reset(
 		return Status;
 	}
 	//Set Bulkin delay
-//	Status = Lan7800WriteRegister(Adapter, BULK_IN_DLY, DEFAULT_BULK_IN_DELAY);
 	Status = Lan7800WriteRegister(Adapter, BULK_IN_DLY, 1); // set to 1 for better performance
 	if (EFI_ERROR(Status)) {
 		return Status;
@@ -1023,6 +1043,9 @@ Lan7800Reset(
 	if (EFI_ERROR(Status)) {
 		return Status;
 	}
+	
+	DEBUGPRINT(DBG_2021, ("%a done\n", __FUNCTION__));
+
 	return Status;
 }
 
@@ -1043,8 +1066,6 @@ Lan7800DeviceInitialize(
 	Adapter->PhyId = 1;
 
 	Adapter->RxTxPathEnabled = 0;
-
-	Adapter->MulticastDone = 0;
 
 	//Reset the device and initialize
 	Status = Lan7800Reset(Adapter);
@@ -1084,12 +1105,14 @@ Lan7800Transmit(
 	CopyMem(BuffPtr, FrameAddr, PacketLen);
 	UrbLen = PacketLen + 8;
 
+
     Status = Adapter->UsbIo->UsbBulkTransfer(
 				Adapter->UsbIo,
 				Adapter->UsbEndpointInfo.EndpointBulkOut,
 				Adapter->TxBuffer,
 				&UrbLen,
-				500,
+				10,		// 2021 use the smaller value for possible poformance improvement
+//				500,	// miliseconds
 				&UsbStatus
 				);
 
@@ -1113,9 +1136,8 @@ Lan7800Receive(
 	Buffer = Adapter->RxBuffer;
 	BuffLen = Adapter->RxBufferSize;
 
-	//DEBUGPRINT(DBG_LAN,("%a\n", __FUNCTION__));
+	DEBUGPRINT(DBG_LAN,("%a\n", __FUNCTION__));
 
-//	ZeroMem(Buffer, BuffLen); // commented 11/23/2020
 	Adapter->RxBufferDataStart = Adapter->RxBuffer;
 
     Status = Adapter->UsbIo->UsbBulkTransfer(
@@ -1124,13 +1146,10 @@ Lan7800Receive(
                           Buffer,
                           &BuffLen,
    //                       100,// original 100 gets all key responses too slow
-                          7, // This is the timeout how long this synchronous request should wait for the data.
+                          3, // This is the timeout how long this synchronous request should wait for the data.
                           &UsbStatus
                           );
 	if (EFI_ERROR(Status) || (UsbStatus != EFI_USB_NOERROR)) {
-		//Print(L"Lan7800Receive error\n");
-		//Adapter->RxBufferDataLen = 0;
-		//Adapter->RxBufferDataPresent = 0;
 		return Status;
 	}
 
@@ -1263,10 +1282,6 @@ Lan7800SetMulticast(
 
 	DEBUGPRINT(DBG_LAN, ("%a\n", __FUNCTION__));
 
-	if (Adapter->MulticastDone) {
-		return EFI_SUCCESS;
-	}
-
 	ZeroMem(McastHashTable, sizeof (McastHashTable));
 
 	Status = Lan7800ReadRegister(Adapter, RFE_CTL, &RfeCtl);
@@ -1281,55 +1296,40 @@ Lan7800SetMulticast(
 
 	//enable/disable promiscuos mode
 	if (Adapter->ReceiveFilterFlags & PXE_OPFLAGS_RECEIVE_FILTER_PROMISCUOUS) {
-		if (Adapter->ReceiveFilterFlags & PXE_OPFLAGS_RECEIVE_FILTER_ENABLE) {
 			RfeCtl |= (RFE_CTL_MCAST_EN_ | RFE_CTL_UCAST_EN_);
-		}
-		if (Adapter->ReceiveFilterFlags & PXE_OPFLAGS_RECEIVE_FILTER_DISABLE) {
+	}else{
 			RfeCtl &= ~(RFE_CTL_MCAST_EN_ | RFE_CTL_UCAST_EN_);
-		}
 	}
 
 	//all multicast
 	if (Adapter->ReceiveFilterFlags & PXE_OPFLAGS_RECEIVE_FILTER_ALL_MULTICAST) {
-		if (Adapter->ReceiveFilterFlags & PXE_OPFLAGS_RECEIVE_FILTER_ENABLE) {
 			RfeCtl |= RFE_CTL_MCAST_EN_;
-		}
-		if (Adapter->ReceiveFilterFlags & PXE_OPFLAGS_RECEIVE_FILTER_DISABLE) {
+	}else{
 			RfeCtl &= ~(RFE_CTL_MCAST_EN_);
-		}
 	}
 	//all unicast
 	if (Adapter->ReceiveFilterFlags & PXE_OPFLAGS_RECEIVE_FILTER_UNICAST) {
-		if (Adapter->ReceiveFilterFlags & PXE_OPFLAGS_RECEIVE_FILTER_ENABLE) {
 			RfeCtl |= RFE_CTL_UCAST_EN_;
-		}
-		if (Adapter->ReceiveFilterFlags & PXE_OPFLAGS_RECEIVE_FILTER_DISABLE) {
+	}else{
 			RfeCtl &= ~(RFE_CTL_UCAST_EN_);
-		}
 	}
 	//broadcast
 	if (Adapter->ReceiveFilterFlags & PXE_OPFLAGS_RECEIVE_FILTER_BROADCAST) {
-		if (Adapter->ReceiveFilterFlags & PXE_OPFLAGS_RECEIVE_FILTER_ENABLE) {
 			RfeCtl |= RFE_CTL_BCAST_EN_;
-		}
-		if (Adapter->ReceiveFilterFlags & PXE_OPFLAGS_RECEIVE_FILTER_DISABLE) {
+	}else{
 			RfeCtl &= ~(RFE_CTL_BCAST_EN_);
-		}
 	}
 
 	//Receive multicast filter
 	if (Adapter->ReceiveFilterFlags & PXE_OPFLAGS_RECEIVE_FILTER_FILTERED_MULTICAST) {
-		if (Adapter->ReceiveFilterFlags & PXE_OPFLAGS_RECEIVE_FILTER_ENABLE) {
 			RfeCtl |= RFE_CTL_MCAST_HASH_;
 			//Calculate the hash value
 			for (Index = 0; Index < Adapter->MulticastListCount; Index++) {
 				BitNum = Lan7800Hash((UINT8*)&Adapter->MultiCastList[Index]);
 				McastHashTable[BitNum / 32] |= (0x01 << (BitNum % 32));
 			}
-		}
-		if (Adapter->ReceiveFilterFlags & PXE_OPFLAGS_RECEIVE_FILTER_DISABLE) {
+	}else{
 			RfeCtl &= ~RFE_CTL_MCAST_HASH_;
-		}
 	}
 	//Set the multicast filter
 	if (RfeCtl & RFE_CTL_MCAST_HASH_) {
@@ -1338,20 +1338,22 @@ Lan7800SetMulticast(
 		if (EFI_ERROR (Status)) {
 			return Status;
 		}
-		//RfeCtl |= (RFE_CTL_MCAST_EN_ | RFE_CTL_UCAST_EN_);
-		Status = Lan7800WriteRegister(Adapter, RFE_CTL, RfeCtl);
-		if (EFI_ERROR (Status)) {
-			return Status;
-		}
+	}
+	
+	// Set the RFE_CTL register here 5/21/2021	
+	Status = Lan7800WriteRegister(Adapter, RFE_CTL, RfeCtl);
+	if (EFI_ERROR (Status)) {
+		return Status;
 	}
 
 	if (!Adapter->RxTxPathEnabled) {
 		Lan7800StartTransmit(Adapter);
 		Lan7800StartReceive(Adapter);
 		Adapter->RxTxPathEnabled = 1;
-	}
+		
+		DEBUGPRINT(DBG_2021, ("%a, RxTxPathEnabled\n", __FUNCTION__));
 
-	Adapter->MulticastDone = 1; // set the flag so that we do not repeat SetMulticast
+	}
 
 	return EFI_SUCCESS;
 }
@@ -1403,6 +1405,7 @@ Lan7800LinkCheck(
 	//read twice 
 	Status = Lan7800ReadPhyRegister(Adapter, Adapter->PhyId, PHY_STATUS, &Value);
 	if (EFI_ERROR(Status)) {
+		DEBUGPRINT(DBG_ERROR, ("%a Lan7800ReadPhyRegister ERROR\n", __FUNCTION__));
 		return Status;
 	}
 	Status = Lan7800ReadPhyRegister(Adapter, Adapter->PhyId, PHY_STATUS, &Value);
