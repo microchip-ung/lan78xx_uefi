@@ -838,6 +838,7 @@ Lan7800Reset(
 	UINT32		Value;
 	UINT32		ChipId;
 	UINT32		Count = 0;
+	UINT32		Flow = 0, Fct_flow = 0;
 	EFI_STATUS	Status = EFI_SUCCESS;
 
 	DEBUGPRINT(DBG_LAN, ("%a\n", __FUNCTION__));
@@ -934,19 +935,20 @@ Lan7800Reset(
 	//Initialize Mac address
 	Lan7800InitMacAddress(Adapter);
 
-	//Respond to IN token with NAK
+	// Aug 2021
+	//Respond to IN token with ZLP in USB2, NRDY in USB3, note that NRDY only in lan78xx USB3 even if this bit is set to ZLP
 	Status = Lan7800ReadRegister(Adapter, USB_CFG0, &Value);
 	if (EFI_ERROR(Status)) {
 		return Status;
 	}
-	Value |= USB_CFG_BIR_;
+	Value &= ~USB_CFG_BIR_;
 	Status = Lan7800WriteRegister(Adapter, USB_CFG0, Value);
 	if (EFI_ERROR(Status)) {
 		return Status;
 	}
 
 	//Set the burst cap
-	if (Adapter->DeviceSpeedCapbility == 0x300) {
+	if (Adapter->DeviceSpeedCapbility >= 0x300) {
 		Value =  DEFAULT_BURST_CAP_SIZE / SS_USB_PKT_SIZE;
 	} else if (Adapter->DeviceSpeedCapbility == 0x210) {
 		Value =  DEFAULT_BURST_CAP_SIZE / HS_USB_PKT_SIZE;
@@ -1033,6 +1035,25 @@ Lan7800Reset(
 		return Status;
 	}
 
+	//Enable flow control 7/21/2021
+	Flow |= (FLOW_CR_TX_FCEN_ | 0xFFFF);
+	Flow |= FLOW_CR_RX_FCEN_;
+	if (Adapter->DeviceSpeedCapbility >= 0x300) {
+		Fct_flow = FLOW_CTRL_THRESHOLD(FLOW_ON_SS, FLOW_OFF_SS);
+	} else {
+		Fct_flow = FLOW_CTRL_THRESHOLD(FLOW_ON_HS, FLOW_OFF_HS);
+	}
+
+	/* threshold value should be set before enabling flow */
+	Status = Lan7800WriteRegister(Adapter, FCT_FLOW, Fct_flow);
+	if (EFI_ERROR(Status)) {
+		return Status;
+	}
+	Status = Lan7800WriteRegister(Adapter, FLOW, Flow);
+	if (EFI_ERROR(Status)) {
+		return Status;
+	}
+
 	//Enabling FCS stripping for received packets
 	Status = Lan7800ReadRegister(Adapter, MAC_RX, &Value);
 	if (EFI_ERROR(Status)) {
@@ -1111,8 +1132,7 @@ Lan7800Transmit(
 				Adapter->UsbEndpointInfo.EndpointBulkOut,
 				Adapter->TxBuffer,
 				&UrbLen,
-				10,		// 2021 use the smaller value for possible poformance improvement
-//				500,	// miliseconds
+				10,		// 2021 use the smaller value for possible poformance improvement in mS
 				&UsbStatus
 				);
 
@@ -1145,8 +1165,7 @@ Lan7800Receive(
                           Adapter->UsbEndpointInfo.EndpointBulkIn,
                           Buffer,
                           &BuffLen,
-   //                       100,// original 100 gets all key responses too slow
-                          3, // This is the timeout how long this synchronous request should wait for the data.
+                          1, // This is the timeout how long this synchronous request should wait for the data. 8/23/2021
                           &UsbStatus
                           );
 	if (EFI_ERROR(Status) || (UsbStatus != EFI_USB_NOERROR)) {

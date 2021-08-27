@@ -27,8 +27,8 @@
 //int DebugMode = DBG_DRV | DBG_LAN | DBG_UNDI | DBG_WARNING | DBG_ERROR;
 //int DebugMode = DBG_WARNING | DBG_ERROR | DBG_2021 | DBG_VERSION;
 //int DebugMode = DBG_WARNING | DBG_ERROR | DBG_VERSION | DBG_TRACE;
-int DebugMode = DBG_WARNING | DBG_ERROR | DBG_VERSION;
-//int DebugMode = 0;
+//int DebugMode = DBG_WARNING | DBG_ERROR | DBG_VERSION;
+int DebugMode = 0;
 
 UINTN
 AsciiInternalPrint(

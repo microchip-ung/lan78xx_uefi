@@ -42,7 +42,7 @@
 #include <Base.h>
 #include <Protocol/Lan7800CmdProtocol.h>
 
-#define DRIVER_VERSION				0x00000005		//Update this for each revision of the driver
+#define DRIVER_VERSION				0x00000006		//Update this for each revision of the driver
 
 //Driver name
 #define LAN7800_DRIVER_NAME			L"LAN7800 USB-to-Ehternet Driver"

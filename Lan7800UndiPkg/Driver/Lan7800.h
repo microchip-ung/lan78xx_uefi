@@ -84,6 +84,18 @@
 #define RX_CMD_C_REF_FAIL_SHIFT_        (14)
 #define RX_CMD_C_REF_FAIL_              (0x4000)
 
+// Flow FCT macros
+#define FLOW_THRESHOLD(n)              ((((n) + 511) / 512) & 0x7F)
+#define FLOW_CTRL_THRESHOLD(on, off)   ((FLOW_THRESHOLD(on)  << 0) | \
+                                        (FLOW_THRESHOLD(off) << 8))
+/* Flow control turned on when Rx FIFO level rises above this level (bytes) */
+#define FLOW_ON_SS                     9216
+#define FLOW_ON_HS                     8704
+
+/* Flow control turned off when Rx FIFO level falls below this level (bytes) */
+#define FLOW_OFF_SS                    4096
+#define FLOW_OFF_HS                    1024
+
 /*
  ****************************************************************************
  *    SCSRs

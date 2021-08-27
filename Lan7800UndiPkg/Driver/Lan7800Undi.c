@@ -439,7 +439,7 @@ Lan7800UndiPxeInitialize(
 	EFI_STATUS			Status = EFI_SUCCESS;
 
 	DEBUGPRINT(DBG_UNDI, ("%a\n", __FUNCTION__));
-	DEBUGPRINT(DBG_VERSION, ("%a version 20210525\n", __FUNCTION__));
+	DEBUGPRINT(DBG_VERSION, ("%a version 20210826\n", __FUNCTION__));
 
 	CpbPtr = (PXE_CPB_INITIALIZE *) (UINTN)Cdb->CPBaddr;
 	DbPtr = (PXE_DB_INITIALIZE *) (UINTN)Cdb->DBaddr;
@@ -478,7 +478,7 @@ Lan7800UndiPxeInitialize(
 			StatFlags = StatFlags | PXE_STATFLAGS_INITIALIZED_NO_MEDIA;
 			DEBUGPRINT(DBG_UNDI, ("Lan7800UndiPxeInitialize: No link\n", __FUNCTION__));
 		} else {
-			Print(L"Lan7800UndiPxeInitialize: Link Up\n");
+			//Print(L"Lan7800UndiPxeInitialize: Link Up\n");
 			DEBUGPRINT(DBG_UNDI, ("Lan7800UndiPxeInitialize: Link Up\n", __FUNCTION__));
 		}
 //	}
